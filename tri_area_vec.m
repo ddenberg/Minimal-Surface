@@ -1,20 +1,8 @@
-function [A, P, tri_edge_length] = tri_area_perimeter_vec(tri, verts)
-% computes the area, perimeter, and edge lengths of a 3D triangle
+function A = tri_area_vec(tri, verts)
+% computes the area of a 3D triangle
 % INPUT:
 %   tri: [m x 3] list of triangles
 %   verts: [3 x n] list of coordinates
-
-edge1_vec = verts(:,tri(:,1)) - verts(:,tri(:,2));
-edge2_vec = verts(:,tri(:,1)) - verts(:,tri(:,3));
-edge3_vec = verts(:,tri(:,2)) - verts(:,tri(:,3));
-
-edge1_length = sqrt(sum(edge1_vec.^2, 1));
-edge2_length = sqrt(sum(edge2_vec.^2, 1));
-edge3_length = sqrt(sum(edge3_vec.^2, 1));
-
-tri_edge_length = [edge1_length; edge2_length; edge3_length];
-
-P = edge1_length + edge2_length + edge3_length;
 
 detTxy = verts(1,tri(:,1)).*verts(2,tri(:,2)) - verts(1,tri(:,2)).*verts(2,tri(:,1)) - ...
          verts(1,tri(:,1)).*verts(2,tri(:,3)) + verts(1,tri(:,3)).*verts(2,tri(:,1)) + ...

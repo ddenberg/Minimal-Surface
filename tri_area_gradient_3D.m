@@ -1,5 +1,5 @@
 function [A, gradA, P] = tri_area_gradient_3D(verts)
-% computes the area of a 2D triangle and the gradient of the area with respect
+% computes the area and perimeter of a 3D triangle and the gradient of the area with respect
 % to each vertex
 % INPUT:
 %   verts: [3 x 3] list of coordinates

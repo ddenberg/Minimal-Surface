@@ -36,31 +36,24 @@ for refine = 0:opt.num_refine
         end
     end
 
-    % MESH.verts(:,~MESH.boundary_verts) = MESH.verts(:,~MESH.boundary_verts) + ...
-    %     1e-1 * randn(size(MESH.verts(:,~MESH.boundary_verts)));
-
-    % if refine > 2
-    %     opt.max_iterations = 5e4;
+    % if isa(opt.quality_threshold, 'function_handle')
+    %     quality_threshold_val = opt.quality_threshold(0);
+    % else
+    %     quality_threshold_val = opt.quality_threshold;
     % end
-
-    if isa(opt.quality_threshold, 'function_handle')
-        quality_threshold_val = opt.quality_threshold(0);
-    else
-        quality_threshold_val = opt.quality_threshold;
-    end
-    [MESH, swap_count, tri_quality] = refine_triangles2(MESH, quality_threshold_val, opt.max_swaps, opt.max_valency);
-
+    % [MESH, swap_count, tri_quality] = refine_triangles2(MESH, quality_threshold_val, opt.max_swaps, opt.max_valency);
     % MESH = remesh(MESH);
 
     [obj, grad] = value_gradient(MESH, opt);
+    grad(:,MESH.boundary_verts) = 0;
     m = zeros(size(MESH.verts));
     v = zeros(size(MESH.verts));
     
     
-    grad_norm = rms(grad(:,~MESH.boundary_verts), 'all');
+    grad_norm = rms(grad, 'all');
     grad_norm_tracker = grad_norm;
-    swap_count_tracker = swap_count;
-    mesh_quality_tracker = mean(tri_quality);
+    swap_count_tracker = [];
+    mesh_quality_tracker = [];
     obj_tracker = obj;
     iter = 1;
     while grad_norm > opt.gradient_threshold && iter < opt.max_iterations
@@ -77,14 +70,13 @@ for refine = 0:opt.num_refine
             v_hat = v / (1 - beta2^iter);
     
             delta = -gamma_val * m_hat ./ (sqrt(v_hat) + epsilon);
-            MESH.verts(:,~MESH.boundary_verts) = MESH.verts(:,~MESH.boundary_verts) + ...
-                delta(:,~MESH.boundary_verts);
-            m(:,MESH.boundary_verts) = 0;
-            v(:,MESH.boundary_verts) = 0;
+            MESH.verts = MESH.verts + delta;
         else
-            % grad = max(min(grad, 1e-1), -1e-1);
-            MESH.verts(:,~MESH.boundary_verts) = MESH.verts(:,~MESH.boundary_verts) - ...
-                gamma_val * grad(:,~MESH.boundary_verts);
+            if opt.use_linesearch
+                MESH = linesearch(-grad, grad, MESH, opt, obj);
+            else
+                MESH.verts = MESH.verts - gamma_val * grad;
+            end
         end
 
         if isa(opt.quality_threshold, 'function_handle')
@@ -92,13 +84,18 @@ for refine = 0:opt.num_refine
         else
             quality_threshold_val = opt.quality_threshold;
         end
-        [MESH, swap_count, tri_quality] = refine_triangles2(MESH, quality_threshold_val, opt.max_swaps, opt.max_valency);
-        
+        if iter > opt.warmup_iterations
+            [MESH, swap_count, tri_quality] = refine_triangles2(MESH, quality_threshold_val, opt.max_swaps, opt.max_valency);
+        else
+            swap_count = 0;
+            tri_quality = inf;
+        end
         % MESH = remesh(MESH);
         
         [obj, grad] = value_gradient(MESH, opt);
+        grad(:,MESH.boundary_verts) = 0;
 
-        grad_norm = rms(grad(:,~MESH.boundary_verts), 'all');
+        grad_norm = rms(grad, 'all');
         grad_norm_tracker(end+1) = grad_norm;
         obj_tracker(end+1) = obj;
         swap_count_tracker(end+1) = swap_count;

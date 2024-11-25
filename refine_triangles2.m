@@ -5,6 +5,9 @@ MESH_new.tri_timer = MESH_new.tri_timer + 1;
 
 [tri_area, tri_perim, tri_edge_length] = tri_area_perimeter_vec(MESH_new.tri_verts, MESH_new.verts);
 tri_quality = 36 * tri_area ./ (sqrt(3) * tri_perim.^2);
+% tri_quality = 4 / sqrt(3) * tri_area ./ (prod(tri_edge_length, 1).^(2/3));
+% tri_quality = 4 * sqrt(3) * tri_area ./ sum(tri_edge_length.^2, 1);
+
 recompute_tri_quality = false(length(tri_quality), 1);
 [~, tri_order] = sort(tri_quality, 'ascend');
 
@@ -20,7 +23,7 @@ for ii = 1:length(tri_order)
     if tri_quality(tri_ind) > quality_threshold
         continue;
     end
-
+    
     % if MESH_new.tri_timer(tri_ind) < 100
     %     continue;
     % end
@@ -40,6 +43,10 @@ for ii = 1:length(tri_order)
     TF = ismembc(longest_edge_verts_adjtri{1}, longest_edge_verts_adjtri{2});
     longest_edge_adjtri = longest_edge_verts_adjtri{1}(TF);
     % longest_edge_adjtri = intersect(longest_edge_verts_adjtri{:});
+
+    if length(longest_edge_adjtri) > 2
+        error('Edge cannot be adjacent to more than two triangles.');
+    end
 
     if length(longest_edge_adjtri) < 2
         % Can't swap edge in this case because the edge is not adjacent
@@ -140,6 +147,8 @@ for ii = 1:length(tri_order)
             perimeter = sum(edges_temp_length);
         
             quality_adjtri(jj) = 36 * area / (sqrt(3) * perimeter^2);
+            % quality_adjtri(jj) = 4 / sqrt(3) * area ./ (prod(edges_temp_length).^(2/3));
+            % quality_adjtri(jj) = 4 * sqrt(3) * area ./ sum(edges_temp_length.^2);
     
             tri_area(longest_edge_adjtri(jj)) = area;
             tri_perim(longest_edge_adjtri(jj)) = perimeter;
@@ -180,6 +189,8 @@ for ii = 1:length(tri_order)
         perimeter = sum(edges_temp_length);
     
         quality_adjtri_trial(jj) = 36 * area / (sqrt(3) * perimeter^2);
+        % quality_adjtri_trial(jj) = 4 / sqrt(3) * area ./ (prod(edges_temp_length).^(2/3));
+        % quality_adjtri_trial(jj) = 4 * sqrt(3) * area ./ sum(edges_temp_length.^2);
 
         tri_edge_length_trial(:,jj) = edges_temp_length;
         tri_area_trial(jj) = area;
@@ -195,6 +206,18 @@ for ii = 1:length(tri_order)
         tri_edge_length(:,longest_edge_adjtri) = tri_edge_length_trial;
 
         recompute_tri_quality(longest_edge_adjtri) = false;
+
+        % edges = [MESH_new.tri_verts(:,1), MESH_new.tri_verts(:,2);
+        %          MESH_new.tri_verts(:,1), MESH_new.tri_verts(:,3);
+        %          MESH_new.tri_verts(:,2), MESH_new.tri_verts(:,3)];
+        % edges = sort(edges, 2);
+        % edges = unique(edges, 'rows');
+        % edges_adjtri = arrayfun(@(v1, v2) intersect(MESH_new.verts_tri{v1}, MESH_new.verts_tri{v2}), ...
+        %     edges(:,1), edges(:,2), 'UniformOutput', false);
+        % edges_adjtri_len = cellfun('length', edges_adjtri);
+        % if any(edges_adjtri_len > 2)
+        %     error('Cannot have more than two adjacent triangles per edge.');
+        % end
     end
     
 
